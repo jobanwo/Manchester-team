@@ -1,0 +1,99 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import os
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
+
+# Function to get image paths and labels from a directory
+def get_image_paths_and_labels(directory_path):
+    image_paths, labels = [], []
+    for root, _, files in os.walk(directory_path):
+        for file in files:
+            if file.endswith(('.jpg', '.png')):
+                image_paths.append(os.path.join(root, file))
+                labels.append(os.path.basename(root))
+    return pd.DataFrame({'image_path': image_paths, 'label': labels})
+
+# Load training and test data into DataFrames
+train_df = get_image_paths_and_labels('/content/drive/My Drive/DATASET/TRAIN')
+test_df = get_image_paths_and_labels('/content/drive/My Drive/DATASET/TEST')
+
+# Data augmentation and preprocessing
+datagen = ImageDataGenerator(rotation_range=10, width_shift_range=0.2, height_shift_range=0.2,
+                             zoom_range=0.2, horizontal_flip=True, vertical_flip=True,
+                             rescale=1./255, validation_split=0.2)
+
+# Define batch size and flow data from DataFrames
+batch_size = 32
+train_set = datagen.flow_from_dataframe(dataframe=train_df, x_col='image_path', y_col='label',
+                                        class_mode='binary', batch_size=batch_size,
+                                        target_size=(64, 64), subset='training')
+
+val_set = datagen.flow_from_dataframe(dataframe=train_df, x_col='image_path', y_col='label',
+                                      class_mode='binary', batch_size=batch_size,
+                                      target_size=(64, 64), subset='validation')
+
+# Display random images from the training set
+def display_random_images(df, num_images=25):
+    random_samples = df.sample(num_images)
+    plt.figure(figsize=(15, 15))
+    for i, (image_path, label) in enumerate(zip(random_samples['image_path'], random_samples['label'])):
+        ax = plt.subplot(5, 5, i + 1)
+        image = plt.imread(image_path)
+        plt.imshow(image)
+        plt.title(label)
+        plt.axis('off')
+    plt.tight_layout()
+    plt.show()
+
+display_random_images(train_df)
+
+# Define the CNN model
+model = Sequential([
+    Conv2D(128, (3, 3), activation='relu', padding='same', input_shape=(64, 64, 3)),
+    MaxPooling2D((2, 2)),
+    Conv2D(128, (3, 3), activation='relu', padding='same'),
+    MaxPooling2D((2, 2)),
+    Conv2D(64, (3, 3), activation='relu', padding='same'),
+    MaxPooling2D((2, 2)),
+    Conv2D(32, (3, 3), activation='relu', padding='same'),
+    MaxPooling2D((2, 2)),
+    Flatten(),
+    Dense(64, activation='relu'),
+    Dense(32, activation='relu'),
+    Dense(1, activation='sigmoid')
+])
+
+# Compile the model
+model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+
+# Display model summary
+model.summary()
+
+# Train the model
+history = model.fit(train_set, epochs=10, validation_data=val_set)
+
+# Evaluate the model
+result = model.predict(val_set)
+predicted_classes = (result > 0.5).astype(int)
+
+# Get true labels from validation set
+y_true = val_set.classes
+
+# Classification report
+from sklearn.metrics import classification_report, confusion_matrix
+class_labels = list(val_set.class_indices.keys())
+report = classification_report(y_true, predicted_classes, target_names=class_labels)
+print("Classification Report:\n", report)
+
+# Confusion matrix
+conf_matrix = confusion_matrix(y_true, predicted_classes)
+plt.figure(figsize=(8, 6))
+sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues', xticklabels=class_labels, yticklabels=class_labels)
+plt.xlabel('Predicted labels')
+plt.ylabel('True labels')
+plt.title('Confusion Matrix')
+plt.show()
