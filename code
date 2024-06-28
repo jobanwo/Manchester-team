@@ -1,14 +1,4 @@
-# requirements.txt
-
-numpy
-pandas
-matplotlib
-seaborn
-tensorflow
-scikit-learn
-
 # setup.py
-
 from setuptools import setup, find_packages
 
 setup(
@@ -23,24 +13,30 @@ setup(
         'seaborn',
         'tensorflow',
         'scikit-learn',
+        'codecarbon',
+        'eco2ai',
+        'scaphandre',
+        'pinpoint',
+        'powerapi'
     ],
 )
 
 # src/__init__.py
-
 # (empty file)
 
 # src/image_classification.py
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import os
+from PIL import Image
+
+# TensorFlow and Keras imports
+import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
-from sklearn.metrics import classification_report, confusion_matrix
 
 # Function to get image paths and labels from a directory
 def get_image_paths_and_labels(directory_path):
@@ -53,23 +49,38 @@ def get_image_paths_and_labels(directory_path):
     return pd.DataFrame({'image_path': image_paths, 'label': labels})
 
 # Load training and test data into DataFrames
-train_df = get_image_paths_and_labels('/content/drive/My Drive/DATASET/TRAIN')
-test_df = get_image_paths_and_labels('/content/drive/My Drive/DATASET/TEST')
+train_df = get_image_paths_and_labels('path/to/training/directory')  # Replace with actual training directory
+test_df = get_image_paths_and_labels('path/to/test/directory')  # Replace with actual test directory
 
 # Data augmentation and preprocessing
-datagen = ImageDataGenerator(rotation_range=10, width_shift_range=0.2, height_shift_range=0.2,
-                             zoom_range=0.2, horizontal_flip=True, vertical_flip=True,
-                             rescale=1./255, validation_split=0.2)
+train_datagen = ImageDataGenerator(rotation_range=10,
+                                   width_shift_range=0.2,
+                                   height_shift_range=0.2,
+                                   zoom_range=0.2,
+                                   horizontal_flip=True,
+                                   vertical_flip=True,
+                                   rescale=1./255,
+                                   validation_split=0.2)
+
+val_datagen = ImageDataGenerator(rescale=1./255)
 
 # Define batch size and flow data from DataFrames
 batch_size = 32
-train_set = datagen.flow_from_dataframe(dataframe=train_df, x_col='image_path', y_col='label',
-                                        class_mode='binary', batch_size=batch_size,
-                                        target_size=(64, 64), subset='training')
+train_set = train_datagen.flow_from_dataframe(dataframe=train_df,
+                                              x_col='image_path',
+                                              y_col='label',
+                                              class_mode='binary',
+                                              batch_size=batch_size,
+                                              target_size=(64, 64),
+                                              subset='training')
 
-val_set = datagen.flow_from_dataframe(dataframe=train_df, x_col='image_path', y_col='label',
-                                      class_mode='binary', batch_size=batch_size,
-                                      target_size=(64, 64), subset='validation')
+val_set = val_datagen.flow_from_dataframe(dataframe=train_df,
+                                          x_col='image_path',
+                                          y_col='label',
+                                          class_mode='binary',
+                                          batch_size=batch_size,
+                                          target_size=(64, 64),
+                                          subset='validation')
 
 # Display random images from the training set
 def display_random_images(df, num_images=25):
@@ -88,7 +99,7 @@ display_random_images(train_df)
 
 # Define the CNN model
 model = Sequential([
-    Conv2D(128, (3, 3), activation='relu', padding='same', input_shape=(64, 64, 3)),
+    Conv2D(128, (3, 3), input_shape=(64, 64, 3), activation='relu', padding='same'),
     MaxPooling2D((2, 2)),
     Conv2D(128, (3, 3), activation='relu', padding='same'),
     MaxPooling2D((2, 2)),
@@ -103,22 +114,29 @@ model = Sequential([
 ])
 
 # Compile the model
-model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+model.compile(optimizer='adam',
+              loss='binary_crossentropy',
+              metrics=['accuracy'])
 
 # Display model summary
 model.summary()
 
 # Train the model
-history = model.fit(train_set, epochs=10, validation_data=val_set)
+history = model.fit_generator(train_set,
+                              steps_per_epoch=len(train_set),
+                              epochs=10,
+                              validation_data=val_set,
+                              validation_steps=len(val_set))
 
 # Evaluate the model
 result = model.predict(val_set)
-predicted_classes = (result > 0.5).astype(int)
+predicted_classes = np.where(result > 0.5, 1, 0)
 
 # Get true labels from validation set
 y_true = val_set.classes
 
 # Classification report
+from sklearn.metrics import classification_report, confusion_matrix
 class_labels = list(val_set.class_indices.keys())
 report = classification_report(y_true, predicted_classes, target_names=class_labels)
 print("Classification Report:\n", report)
@@ -133,14 +151,13 @@ plt.title('Confusion Matrix')
 plt.show()
 
 # tests/test_image_classification.py
-
 import unittest
 from src.image_classification import get_image_paths_and_labels
 
 class TestImageClassification(unittest.TestCase):
     
     def test_get_image_paths_and_labels(self):
-        test_directory = 'path/to/test/directory'
+        test_directory = 'path/to/test/directory'  # Replace with actual test directory
         df = get_image_paths_and_labels(test_directory)
         self.assertIsInstance(df, pd.DataFrame)
         self.assertIn('image_path', df.columns)
