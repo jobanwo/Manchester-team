@@ -1,5 +1,5 @@
 
-1. **Project Title**: Manchester team - 
+1. **Project Title**: Manchester team - Enhancing Waste Management through Deep Learning: A CNN-Based Approach to Domestic Garbage Sorting
 2. **Description**: Provides a brief overview of what the project does and why it is important.
 3.
 4.
