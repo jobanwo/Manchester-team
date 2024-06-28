@@ -12,6 +12,6 @@
 Problem 
 "The train_model function is designed to train a neural network model using the Keras fit_generator method, which is suitable for training with data generators."
 this took up a substantial time of the program, to combat this we reduced the total number of epochs from 30 to 10"
-Done by Iyinoluwa,Samson,Norton
 This was done by using our judgment to find a number which strikes a balance between a high good reliable number for results but also low enough to improve run time meaningfully
-
+Attempted to Use PowerAPI and Code Carbon to measure and collate CO2 emissions levels based on energy consumptions data. Could not intergrate correctly and get the code to run
+Done by Iyinoluwa,Samson,Norton
