@@ -1,3 +1,37 @@
+# requirements.txt
+
+numpy
+pandas
+matplotlib
+seaborn
+tensorflow
+scikit-learn
+
+# setup.py
+
+from setuptools import setup, find_packages
+
+setup(
+    name='image_classification',
+    version='0.1',
+    packages=find_packages(where='src'),
+    package_dir={'': 'src'},
+    install_requires=[
+        'numpy',
+        'pandas',
+        'matplotlib',
+        'seaborn',
+        'tensorflow',
+        'scikit-learn',
+    ],
+)
+
+# src/__init__.py
+
+# (empty file)
+
+# src/image_classification.py
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -6,6 +40,7 @@ import os
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
+from sklearn.metrics import classification_report, confusion_matrix
 
 # Function to get image paths and labels from a directory
 def get_image_paths_and_labels(directory_path):
@@ -84,7 +119,6 @@ predicted_classes = (result > 0.5).astype(int)
 y_true = val_set.classes
 
 # Classification report
-from sklearn.metrics import classification_report, confusion_matrix
 class_labels = list(val_set.class_indices.keys())
 report = classification_report(y_true, predicted_classes, target_names=class_labels)
 print("Classification Report:\n", report)
@@ -97,3 +131,20 @@ plt.xlabel('Predicted labels')
 plt.ylabel('True labels')
 plt.title('Confusion Matrix')
 plt.show()
+
+# tests/test_image_classification.py
+
+import unittest
+from src.image_classification import get_image_paths_and_labels
+
+class TestImageClassification(unittest.TestCase):
+    
+    def test_get_image_paths_and_labels(self):
+        test_directory = 'path/to/test/directory'
+        df = get_image_paths_and_labels(test_directory)
+        self.assertIsInstance(df, pd.DataFrame)
+        self.assertIn('image_path', df.columns)
+        self.assertIn('label', df.columns)
+
+if __name__ == '__main__':
+    unittest.main()
